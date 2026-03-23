@@ -1,123 +1,169 @@
 /**
  * Kafka Trace Consumer - 主入口
  *
- * 开发模式: npx ts-node src/consumer.ts
- * 编译运行: npm run build && npm start
+ * 开发模式:
+ *   npm run dev
  *
- * 使用步骤:
- *   1. 修改 src/config.ts 中的 KAFKA_BROKER 为云服务器公网IP
- *   2. 在 src/message-handler.ts 中实现业务逻辑
- *   3. 运行上面的命令启动
+ * 生产模式:
+ *   npm run build
+ *   npm start
+ *
+ * 当前职责:
+ *   1. 连接 Kafka
+ *   2. 消费 TraceBatch 数据
+ *   3. 写入 CSV 文件
+ *   4. 向前端仪表盘推送实时数据
+ *   5. 输出消费统计信息
  */
 import config from './config';
 import * as kafkaClient from './kafka-client';
-import { Stats } from './stats';
-import { handleMessage } from './message-handler';
-import { TraceBatch } from './types';
+import { closeCsvWriter, getCsvOutputDir } from './csv-writer';
 import { logger } from './logger';
-import { startServer as startWsServer, stopServer as stopWsServer, broadcast } from './ws-server';
+import { handleMessage } from './message-handler';
+import { Stats } from './stats';
+import { TraceBatch } from './types';
+import {
+    broadcast,
+    startServer as startWsServer,
+    stopServer as stopWsServer,
+} from './ws-server';
 
 const stats = new Stats();
+let statsTimer: NodeJS.Timeout | null = null;
+let isShuttingDown = false;
 
 // =====================================================================
 //  主函数
 // =====================================================================
 async function run(): Promise<void> {
-    logger.info('╔════════════════════════════════════════════════════╗');
-    logger.info('║  Kafka Trace Consumer (TypeScript) - 控制端消费程序  ║');
-    logger.info('╚════════════════════════════════════════════════════╝');
-    logger.info('');
+    logger.info('========================================');
+    logger.info('Kafka Trace Consumer (TypeScript)');
+    logger.info('========================================');
     logger.info(`  Broker:  ${config.KAFKA_BROKER}`);
     logger.info(`  Topic:   ${config.TOPIC}`);
     logger.info(`  Group:   ${config.GROUP_ID}`);
-    logger.info(`  From:    ${config.FROM_BEGINNING ? '从头消费' : '只消费最新'}`);
+    logger.info(`  From:    ${config.FROM_BEGINNING ? 'from beginning' : 'latest only'}`);
+    logger.info(`  CSV:     ${getCsvOutputDir()}`);
     logger.info('');
 
     try {
-        // 0. 启动 WebSocket 服务 (供前端仪表盘连接)
+        // 0. 启动 WebSocket 服务，供前端仪表盘连接
         startWsServer(3001);
-        logger.info('✓ 仪表盘地址: http://localhost:5173');
+        logger.info('Dashboard: http://localhost:5173');
 
-        // 定时广播统计数据
-        const statsTimer = setInterval(() => {
+        // 定时向前端广播消费统计
+        statsTimer = setInterval(() => {
             broadcast({ type: 'stats', stats: stats.getSnapshot() });
         }, 1000);
 
-        // 1. 连接
-        logger.info('正在连接 Kafka Broker...');
+        // 1. 连接 Kafka Broker
+        logger.info('Connecting to Kafka broker...');
         await kafkaClient.connect();
-        logger.info(`✓ 已连接: ${config.KAFKA_BROKER}`);
+        logger.info(`Connected: ${config.KAFKA_BROKER}`);
 
-        // 2. 订阅
+        // 2. 订阅 Topic
         await kafkaClient.subscribe();
-        logger.info(`✓ 已订阅 topic: ${config.TOPIC}`);
-        logger.info('');
-        logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        logger.info('开始消费数据... (按 Ctrl+C 退出)');
-        logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        logger.info('');
+        logger.info(`Subscribed topic: ${config.TOPIC}`);
+        logger.info('Start consuming messages... Press Ctrl+C to exit.');
 
-        // 3. 消费
+        // 3. 开始消费消息
         await kafkaClient.run(async ({ partition, message }) => {
             try {
-                const payload: TraceBatch = JSON.parse(message.value!.toString());
+                if (!message.value) {
+                    logger.warn(`Skip empty message (partition:${partition} offset:${message.offset})`);
+                    return;
+                }
+
+                const payload: TraceBatch = JSON.parse(message.value.toString());
                 const { seq, frames } = payload;
 
+                // 记录消费统计
                 stats.record(frames.length);
                 stats.printProgress(config.PROGRESS_INTERVAL, partition, message.offset, seq, logger);
 
+                // 处理消息:
+                //   - 写入 CSV
+                //   - 推送前端
                 await handleMessage(payload, { partition, offset: message.offset });
-
-            } catch (err) {
-                const error = err as Error;
+            } catch (error) {
+                const err = error as Error;
                 logger.error(
-                    `处理消息失败 (partition:${partition} offset:${message.offset}): ${error.message}`
+                    `Message handling failed (partition:${partition} offset:${message.offset}): ${err.message}`,
                 );
             }
         });
-
     } catch (error) {
         const err = error as Error;
-        logger.error(`启动失败: ${err.message}`);
-        logger.error('排查步骤:');
-        logger.error('  1. 确认云服务器 Kafka 正在运行');
-        logger.error('  2. 确认安全组已开放 9092 端口');
-        logger.error('  3. 确认 src/config.ts 中的 KAFKA_BROKER 地址正确');
-        process.exit(1);
+        logger.error(`Startup failed: ${err.message}`);
+        logger.error('Checklist:');
+        logger.error('  1. Confirm Kafka is running');
+        logger.error('  2. Confirm port 9092 is reachable');
+        logger.error('  3. Confirm src/config.ts has the correct KAFKA_BROKER');
+        await shutdown(1);
     }
 }
 
 // =====================================================================
 //  优雅退出
 // =====================================================================
-async function shutdown(): Promise<void> {
-    logger.info('正在关闭...');
+async function shutdown(exitCode: number = 0): Promise<void> {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    logger.info('Shutting down...');
     stats.printSummary(logger);
-    try {
-        stopWsServer();
-        await kafkaClient.disconnect();
-        logger.info('✓ 已断开 Kafka 连接');
-    } catch {
-        // ignore
+
+    if (statsTimer) {
+        clearInterval(statsTimer);
+        statsTimer = null;
     }
-    logger.info('程序已退出');
-    process.exit(0);
+
+    // 先关闭 WebSocket，避免前端继续收到残余数据
+    stopWsServer();
+
+    try {
+        // 关闭 CSV 写入流，确保缓冲区刷盘
+        await closeCsvWriter();
+    } catch (error) {
+        const err = error as Error;
+        logger.error(`Failed to close CSV writer: ${err.message}`);
+    }
+
+    try {
+        await kafkaClient.disconnect();
+        logger.info('Kafka connection closed');
+    } catch (error) {
+        const err = error as Error;
+        logger.error(`Failed to disconnect Kafka client: ${err.message}`);
+    }
+
+    logger.info('Process exited');
+    process.exit(exitCode);
 }
 
-process.on('SIGINT',  () => { void shutdown(); });
-process.on('SIGTERM', () => { void shutdown(); });
-
-process.on('uncaughtException', (err: Error) => {
-    logger.error(`未捕获的异常: ${err.message}`);
-    process.exit(1);
+// Ctrl+C 退出
+process.on('SIGINT', () => {
+    void shutdown(0);
 });
 
+// 系统终止信号
+process.on('SIGTERM', () => {
+    void shutdown(0);
+});
+
+// 未捕获异常
+process.on('uncaughtException', (error: Error) => {
+    logger.error(`Uncaught exception: ${error.message}`);
+    void shutdown(1);
+});
+
+// 未处理的 Promise 拒绝
 process.on('unhandledRejection', (reason: unknown) => {
-    logger.error(`未处理的 Promise 拒绝: ${String(reason)}`);
-    process.exit(1);
+    logger.error(`Unhandled rejection: ${String(reason)}`);
+    void shutdown(1);
 });
 
-run().catch((err: Error) => {
-    logger.error(`启动异常: ${err.message}`);
-    process.exit(1);
+run().catch((error: Error) => {
+    logger.error(`Unexpected startup error: ${error.message}`);
+    void shutdown(1);
 });

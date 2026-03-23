@@ -1,25 +1,17 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   WsMessage,
-  WsDataMessage,
-  DataPoint,
   StatsSnapshot,
   TraceFrame,
   ConsumedFrameRow,
 } from '../types';
 
-const MAX_POINTS = 300;
-const MAX_RECENT_MESSAGES = 50;
 const MAX_CHART_FRAMES = 10000;
-const MAX_TABLE_FRAMES = 2000;
 const WS_URL = 'ws://localhost:3001';
 
 export function useWebSocket() {
   const [connected, setConnected] = useState(false);
-  const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
   const [latest, setLatest] = useState<TraceFrame | null>(null);
-  const [latestMessage, setLatestMessage] = useState<WsDataMessage | null>(null);
-  const [recentMessages, setRecentMessages] = useState<WsDataMessage[]>([]);
   const [chartFrames, setChartFrames] = useState<ConsumedFrameRow[]>([]);
   const [stats, setStats] = useState<StatsSnapshot | null>(null);
   const [seq, setSeq] = useState(0);
@@ -46,7 +38,6 @@ export function useWebSocket() {
       const msg: WsMessage = JSON.parse(event.data);
 
       if (msg.type === 'data') {
-        const point: DataPoint = { ...msg.latest, _time: msg.timestamp };
         const nextFrames: ConsumedFrameRow[] = msg.batch.frames.map((frame) => ({
           ...frame,
           _time: msg.timestamp,
@@ -57,21 +48,12 @@ export function useWebSocket() {
         }));
 
         setLatest(msg.latest);
-        setLatestMessage(msg);
         setSeq(msg.seq);
         setTaskId(msg.taskId);
-        setDataPoints((prev) => {
-          const next = [...prev, point];
-          return next.length > MAX_POINTS ? next.slice(-MAX_POINTS) : next;
-        });
         setChartFrames((prev) => {
           const next = [...prev, ...nextFrames];
           next.sort((a, b) => a.ts - b.ts || a._time - b._time);
           return next.length > MAX_CHART_FRAMES ? next.slice(-MAX_CHART_FRAMES) : next;
-        });
-        setRecentMessages((prev) => {
-          const next = [msg, ...prev];
-          return next.slice(0, MAX_RECENT_MESSAGES);
         });
       } else if (msg.type === 'stats') {
         setStats(msg.stats);
@@ -89,12 +71,8 @@ export function useWebSocket() {
 
   return {
     connected,
-    dataPoints,
     latest,
-    latestMessage,
-    recentMessages,
     chartFrames,
-    tableFrames: chartFrames.slice(-MAX_TABLE_FRAMES),
     stats,
     seq,
     taskId,

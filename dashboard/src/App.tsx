@@ -1,75 +1,19 @@
 import React from 'react';
 import {
   Activity,
-  ArrowUpDown,
   BarChart3,
-  CircleDot,
   Cpu,
   Gauge,
   Radio,
   Thermometer,
-  TrendingUp,
   Zap,
 } from 'lucide-react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { MetricCard } from './components/MetricCard';
 import { TrendChart } from './components/TrendChart';
 
-const FRAME_COLUMNS = [
-  { key: 'ts', label: 'ts' },
-  { key: 'axis1_position', label: 'axis1_position' },
-  { key: 'axis1_velocity', label: 'axis1_velocity' },
-  { key: 'axis1_torque', label: 'axis1_torque' },
-  { key: 'axis2_position', label: 'axis2_position' },
-  { key: 'axis2_velocity', label: 'axis2_velocity' },
-  { key: 'motor_rpm', label: 'motor_rpm' },
-  { key: 'motor_temp', label: 'motor_temp' },
-  { key: 'servo_current', label: 'servo_current' },
-  { key: 'servo_voltage', label: 'servo_voltage' },
-  { key: 'pressure_bar', label: 'pressure_bar' },
-] as const;
-
-function formatDateTime(timestamp: number): string {
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).format(timestamp);
-}
-
-function formatNumber(value: number, fractionDigits: number = 3): string {
-  return Number.isFinite(value) ? value.toFixed(fractionDigits) : '-';
-}
-
 export default function App() {
-  const {
-    connected,
-    latest,
-    latestMessage,
-    recentMessages,
-    chartFrames,
-    tableFrames,
-    stats,
-    seq,
-    taskId,
-  } = useWebSocket();
-
-  const latestBatchFrames = latestMessage?.batch.frames ?? [];
-  const rawPayload = latestMessage
-    ? JSON.stringify(
-        {
-          timestamp: latestMessage.timestamp,
-          meta: latestMessage.meta,
-          batch: latestMessage.batch,
-        },
-        null,
-        2,
-      )
-    : '';
+  const { connected, latest, chartFrames, stats, seq, taskId } = useWebSocket();
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -129,7 +73,7 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-[1600px] space-y-6 px-6 py-6">
-        {latest && latestMessage ? (
+        {latest ? (
           <>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
               <MetricCard
@@ -217,143 +161,6 @@ export default function App() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-              <section className="rounded-xl border border-slate-700/50 bg-slate-800/60 p-4 backdrop-blur">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <CircleDot className="h-4 w-4 text-cyan-400" />
-                    <h2 className="text-sm font-semibold text-slate-100">
-                      Consumed Frames Ordered By ts
-                    </h2>
-                  </div>
-                  <div className="text-right text-xs text-slate-400">
-                    <p>{chartFrames.length.toLocaleString()} buffered for charts</p>
-                    <p>{tableFrames.length.toLocaleString()} shown in table</p>
-                    <p>{latestBatchFrames.length.toLocaleString()} frames in latest batch</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/50 p-3">
-                    <p className="text-xs text-slate-500">Task ID</p>
-                    <p className="mt-1 truncate text-sm font-medium text-slate-100">
-                      {latestMessage.taskId}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/50 p-3">
-                    <p className="text-xs text-slate-500">Seq</p>
-                    <p className="mt-1 text-sm font-medium text-slate-100">{latestMessage.seq}</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/50 p-3">
-                    <p className="text-xs text-slate-500">Period</p>
-                    <p className="mt-1 text-sm font-medium text-slate-100">
-                      {latestMessage.period} ms
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/50 p-3">
-                    <p className="text-xs text-slate-500">Partition</p>
-                    <p className="mt-1 text-sm font-medium text-slate-100">
-                      {latestMessage.meta.partition}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/50 p-3">
-                    <p className="text-xs text-slate-500">Offset</p>
-                    <p className="mt-1 truncate text-sm font-medium text-slate-100">
-                      {latestMessage.meta.offset}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/50 p-3">
-                    <p className="text-xs text-slate-500">Consumed At</p>
-                    <p className="mt-1 text-sm font-medium text-slate-100">
-                      {formatDateTime(latestMessage.timestamp)}
-                    </p>
-                  </div>
-                </div>
-
-                <p className="mt-4 text-xs text-slate-500">
-                  Charts keep a longer 10000-frame history, while the table only shows the latest 2000 frames in ascending ts order.
-                </p>
-
-                <div className="mt-4 overflow-hidden rounded-lg border border-slate-700/60">
-                  <div className="max-h-[960px] overflow-auto">
-                    <table className="min-w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900/80 text-slate-400">
-                        <tr>
-                          <th className="px-3 py-2 font-medium">#</th>
-                          {FRAME_COLUMNS.map((column) => (
-                            <th key={column.key} className="whitespace-nowrap px-3 py-2 font-medium">
-                              {column.label}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tableFrames.map((frame, index) => (
-                            <tr
-                              key={`${frame._partition}-${frame._offset}-${frame.ts}-${index}`}
-                              className="border-t border-slate-800/80 bg-slate-950/30 transition-colors hover:bg-slate-900/60"
-                            >
-                              <td className="px-3 py-2 text-slate-500">{index + 1}</td>
-                              {FRAME_COLUMNS.map((column) => (
-                                <td key={column.key} className="whitespace-nowrap px-3 py-2 tabular-nums">
-                                  {formatNumber(frame[column.key])}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </section>
-
-              <div className="space-y-4">
-                <section className="rounded-xl border border-slate-700/50 bg-slate-800/60 p-4 backdrop-blur">
-                  <div className="mb-4 flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-emerald-400" />
-                    <h2 className="text-sm font-semibold text-slate-100">Recent Consumed Messages</h2>
-                  </div>
-
-                  <div className="space-y-2">
-                    {recentMessages.map((message) => (
-                      <div
-                        key={`${message.meta.partition}-${message.meta.offset}`}
-                        className="rounded-lg border border-slate-700/60 bg-slate-900/50 p-3"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-medium text-slate-100">
-                              {message.taskId} / seq #{message.seq}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              partition {message.meta.partition} | offset {message.meta.offset}
-                            </p>
-                          </div>
-                          <span className="rounded bg-slate-800 px-2 py-1 text-xs text-cyan-300">
-                            {message.frameCount} frames
-                          </span>
-                        </div>
-                        <p className="mt-2 text-xs text-slate-500">
-                          {formatDateTime(message.timestamp)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="rounded-xl border border-slate-700/50 bg-slate-800/60 p-4 backdrop-blur">
-                  <div className="mb-4 flex items-center gap-2">
-                    <ArrowUpDown className="h-4 w-4 text-violet-400" />
-                    <h2 className="text-sm font-semibold text-slate-100">Raw Payload JSON</h2>
-                  </div>
-
-                  <pre className="max-h-[560px] overflow-auto rounded-lg border border-slate-700/60 bg-slate-950/70 p-3 text-xs leading-6 text-slate-300">
-                    {rawPayload}
-                  </pre>
-                </section>
-              </div>
-            </div>
-
             {stats && (
               <div className="grid grid-cols-2 gap-3 text-sm md:hidden">
                 <div className="rounded-lg bg-slate-800/60 p-3 text-center">
@@ -383,7 +190,7 @@ export default function App() {
             </p>
             <p className="text-center text-sm text-slate-600">
               {connected
-                ? 'Dashboard will keep showing metrics and also render the consumed batch payload once messages arrive.'
+                ? 'Dashboard will keep showing real-time metrics once consumed messages arrive.'
                 : 'Make sure the Kafka consumer is running (npm run dev).'}
             </p>
           </div>
