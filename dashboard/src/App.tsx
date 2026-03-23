@@ -21,7 +21,7 @@ export default function App() {
         <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-3">
           <div className="flex items-center gap-3">
             <Cpu className="h-6 w-6 text-cyan-400" />
-            <h1 className="text-lg font-bold tracking-tight">Trace Monitor</h1>
+            <h1 className="text-lg font-bold tracking-tight">Trace Dashboard</h1>
             {taskId && (
               <span className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
                 {taskId}
