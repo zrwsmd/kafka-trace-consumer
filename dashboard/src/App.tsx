@@ -52,12 +52,13 @@ export default function App() {
     latest,
     latestMessage,
     recentMessages,
+    consumedFrames,
     stats,
     seq,
     taskId,
   } = useWebSocket();
 
-  const currentFrames = latestMessage?.batch.frames ?? [];
+  const latestBatchFrames = latestMessage?.batch.frames ?? [];
   const rawPayload = latestMessage
     ? JSON.stringify(
         {
@@ -222,12 +223,13 @@ export default function App() {
                   <div className="flex items-center gap-2">
                     <CircleDot className="h-4 w-4 text-cyan-400" />
                     <h2 className="text-sm font-semibold text-slate-100">
-                      Latest Consumed Batch
+                      Consumed Frames Ordered By ts
                     </h2>
                   </div>
-                  <span className="text-xs text-slate-400">
-                    {currentFrames.length.toLocaleString()} frames in current batch
-                  </span>
+                  <div className="text-right text-xs text-slate-400">
+                    <p>{consumedFrames.length.toLocaleString()} buffered frames</p>
+                    <p>{latestBatchFrames.length.toLocaleString()} frames in latest batch</p>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
@@ -267,8 +269,12 @@ export default function App() {
                   </div>
                 </div>
 
+                <p className="mt-4 text-xs text-slate-500">
+                  Frames below are accumulated from recent consumed messages and sorted by ts in ascending order.
+                </p>
+
                 <div className="mt-4 overflow-hidden rounded-lg border border-slate-700/60">
-                  <div className="overflow-x-auto">
+                  <div className="max-h-[960px] overflow-auto">
                     <table className="min-w-full text-left text-xs text-slate-300">
                       <thead className="bg-slate-900/80 text-slate-400">
                         <tr>
@@ -281,17 +287,12 @@ export default function App() {
                         </tr>
                       </thead>
                       <tbody>
-                        {currentFrames
-                          .slice()
-                          .reverse()
-                          .map((frame, index) => (
+                        {consumedFrames.map((frame, index) => (
                             <tr
-                              key={`${frame.ts}-${index}`}
+                              key={`${frame._partition}-${frame._offset}-${frame.ts}-${index}`}
                               className="border-t border-slate-800/80 bg-slate-950/30 transition-colors hover:bg-slate-900/60"
                             >
-                              <td className="px-3 py-2 text-slate-500">
-                                {currentFrames.length - index}
-                              </td>
+                              <td className="px-3 py-2 text-slate-500">{index + 1}</td>
                               {FRAME_COLUMNS.map((column) => (
                                 <td key={column.key} className="whitespace-nowrap px-3 py-2 tabular-nums">
                                   {formatNumber(frame[column.key])}

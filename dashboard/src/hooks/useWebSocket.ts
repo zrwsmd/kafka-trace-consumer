@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { WsMessage, WsDataMessage, DataPoint, StatsSnapshot, TraceFrame } from '../types';
+import {
+  WsMessage,
+  WsDataMessage,
+  DataPoint,
+  StatsSnapshot,
+  TraceFrame,
+  ConsumedFrameRow,
+} from '../types';
 
 const MAX_POINTS = 300;
-const MAX_RECENT_MESSAGES = 12;
+const MAX_RECENT_MESSAGES = 50;
+const MAX_FRAME_ROWS = 5000;
 const WS_URL = 'ws://localhost:3001';
 
 export function useWebSocket() {
@@ -11,6 +19,7 @@ export function useWebSocket() {
   const [latest, setLatest] = useState<TraceFrame | null>(null);
   const [latestMessage, setLatestMessage] = useState<WsDataMessage | null>(null);
   const [recentMessages, setRecentMessages] = useState<WsDataMessage[]>([]);
+  const [consumedFrames, setConsumedFrames] = useState<ConsumedFrameRow[]>([]);
   const [stats, setStats] = useState<StatsSnapshot | null>(null);
   const [seq, setSeq] = useState(0);
   const [taskId, setTaskId] = useState('');
@@ -37,6 +46,15 @@ export function useWebSocket() {
 
       if (msg.type === 'data') {
         const point: DataPoint = { ...msg.latest, _time: msg.timestamp };
+        const nextFrames: ConsumedFrameRow[] = msg.batch.frames.map((frame) => ({
+          ...frame,
+          _time: msg.timestamp,
+          _seq: msg.seq,
+          _taskId: msg.taskId,
+          _partition: msg.meta.partition,
+          _offset: msg.meta.offset,
+        }));
+
         setLatest(msg.latest);
         setLatestMessage(msg);
         setSeq(msg.seq);
@@ -44,6 +62,11 @@ export function useWebSocket() {
         setDataPoints((prev) => {
           const next = [...prev, point];
           return next.length > MAX_POINTS ? next.slice(-MAX_POINTS) : next;
+        });
+        setConsumedFrames((prev) => {
+          const next = [...prev, ...nextFrames];
+          next.sort((a, b) => a.ts - b.ts || a._time - b._time);
+          return next.length > MAX_FRAME_ROWS ? next.slice(-MAX_FRAME_ROWS) : next;
         });
         setRecentMessages((prev) => {
           const next = [msg, ...prev];
@@ -69,6 +92,7 @@ export function useWebSocket() {
     latest,
     latestMessage,
     recentMessages,
+    consumedFrames,
     stats,
     seq,
     taskId,

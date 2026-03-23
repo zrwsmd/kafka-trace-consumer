@@ -54,3 +54,11 @@ export type WsMessage = WsDataMessage | WsStatsMessage;
 export interface DataPoint extends TraceFrame {
   _time: number; // arrival timestamp for x-axis
 }
+
+export interface ConsumedFrameRow extends TraceFrame {
+  _time: number;
+  _seq: number;
+  _taskId: string;
+  _partition: number;
+  _offset: string;
+}
