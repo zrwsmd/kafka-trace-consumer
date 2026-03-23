@@ -51,6 +51,8 @@ export async function handleMessage(payload: TraceBatch, meta: MessageMeta): Pro
             timestamp: Date.now(),
             latest: frames[frames.length - 1],
             frameCount: frames.length,
+            batch: payload,
+            meta,
         });
     }
 }

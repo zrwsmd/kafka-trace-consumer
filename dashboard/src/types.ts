@@ -12,6 +12,18 @@ export interface TraceFrame {
   pressure_bar: number;
 }
 
+export interface TraceBatch {
+  taskId: string;
+  seq: number;
+  period: number;
+  frames: TraceFrame[];
+}
+
+export interface MessageMeta {
+  partition: number;
+  offset: string;
+}
+
 export interface WsDataMessage {
   type: 'data';
   taskId: string;
@@ -20,6 +32,8 @@ export interface WsDataMessage {
   timestamp: number;
   latest: TraceFrame;
   frameCount: number;
+  batch: TraceBatch;
+  meta: MessageMeta;
 }
 
 export interface StatsSnapshot {

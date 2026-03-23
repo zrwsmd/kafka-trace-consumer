@@ -3,7 +3,7 @@
  * 将 Kafka 消费到的数据实时推送给前端仪表盘
  */
 import { WebSocketServer, WebSocket } from 'ws';
-import { TraceFrame, StatsSnapshot } from './types';
+import { TraceBatch, TraceFrame, StatsSnapshot, MessageMeta } from './types';
 
 let wss: WebSocketServer | null = null;
 const clients = new Set<WebSocket>();
@@ -16,6 +16,8 @@ export interface WsDataMessage {
     timestamp: number;
     latest: TraceFrame;
     frameCount: number;
+    batch: TraceBatch;
+    meta: MessageMeta;
 }
 
 export interface WsStatsMessage {

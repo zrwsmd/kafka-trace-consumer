@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { WsMessage, DataPoint, StatsSnapshot, TraceFrame } from '../types';
+import { WsMessage, WsDataMessage, DataPoint, StatsSnapshot, TraceFrame } from '../types';
 
 const MAX_POINTS = 300;
+const MAX_RECENT_MESSAGES = 12;
 const WS_URL = 'ws://localhost:3001';
 
 export function useWebSocket() {
   const [connected, setConnected] = useState(false);
   const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
   const [latest, setLatest] = useState<TraceFrame | null>(null);
+  const [latestMessage, setLatestMessage] = useState<WsDataMessage | null>(null);
+  const [recentMessages, setRecentMessages] = useState<WsDataMessage[]>([]);
   const [stats, setStats] = useState<StatsSnapshot | null>(null);
   const [seq, setSeq] = useState(0);
   const [taskId, setTaskId] = useState('');
@@ -35,11 +38,16 @@ export function useWebSocket() {
       if (msg.type === 'data') {
         const point: DataPoint = { ...msg.latest, _time: msg.timestamp };
         setLatest(msg.latest);
+        setLatestMessage(msg);
         setSeq(msg.seq);
         setTaskId(msg.taskId);
         setDataPoints((prev) => {
           const next = [...prev, point];
           return next.length > MAX_POINTS ? next.slice(-MAX_POINTS) : next;
+        });
+        setRecentMessages((prev) => {
+          const next = [msg, ...prev];
+          return next.slice(0, MAX_RECENT_MESSAGES);
         });
       } else if (msg.type === 'stats') {
         setStats(msg.stats);
@@ -55,5 +63,14 @@ export function useWebSocket() {
     };
   }, [connect]);
 
-  return { connected, dataPoints, latest, stats, seq, taskId };
+  return {
+    connected,
+    dataPoints,
+    latest,
+    latestMessage,
+    recentMessages,
+    stats,
+    seq,
+    taskId,
+  };
 }
