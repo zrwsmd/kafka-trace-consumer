@@ -10,7 +10,8 @@ import {
 
 const MAX_POINTS = 300;
 const MAX_RECENT_MESSAGES = 50;
-const MAX_FRAME_ROWS = 2000;
+const MAX_CHART_FRAMES = 10000;
+const MAX_TABLE_FRAMES = 2000;
 const WS_URL = 'ws://localhost:3001';
 
 export function useWebSocket() {
@@ -19,7 +20,7 @@ export function useWebSocket() {
   const [latest, setLatest] = useState<TraceFrame | null>(null);
   const [latestMessage, setLatestMessage] = useState<WsDataMessage | null>(null);
   const [recentMessages, setRecentMessages] = useState<WsDataMessage[]>([]);
-  const [consumedFrames, setConsumedFrames] = useState<ConsumedFrameRow[]>([]);
+  const [chartFrames, setChartFrames] = useState<ConsumedFrameRow[]>([]);
   const [stats, setStats] = useState<StatsSnapshot | null>(null);
   const [seq, setSeq] = useState(0);
   const [taskId, setTaskId] = useState('');
@@ -63,10 +64,10 @@ export function useWebSocket() {
           const next = [...prev, point];
           return next.length > MAX_POINTS ? next.slice(-MAX_POINTS) : next;
         });
-        setConsumedFrames((prev) => {
+        setChartFrames((prev) => {
           const next = [...prev, ...nextFrames];
           next.sort((a, b) => a.ts - b.ts || a._time - b._time);
-          return next.length > MAX_FRAME_ROWS ? next.slice(-MAX_FRAME_ROWS) : next;
+          return next.length > MAX_CHART_FRAMES ? next.slice(-MAX_CHART_FRAMES) : next;
         });
         setRecentMessages((prev) => {
           const next = [msg, ...prev];
@@ -92,7 +93,8 @@ export function useWebSocket() {
     latest,
     latestMessage,
     recentMessages,
-    consumedFrames,
+    chartFrames,
+    tableFrames: chartFrames.slice(-MAX_TABLE_FRAMES),
     stats,
     seq,
     taskId,

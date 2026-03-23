@@ -51,7 +51,8 @@ export default function App() {
     latest,
     latestMessage,
     recentMessages,
-    consumedFrames,
+    chartFrames,
+    tableFrames,
     stats,
     seq,
     taskId,
@@ -171,17 +172,17 @@ export default function App() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <TrendChart
                 title="Motor RPM"
-                data={consumedFrames}
+                data={chartFrames}
                 dataKeys={[{ key: 'motor_rpm', name: 'RPM', color: '#22d3ee' }]}
               />
               <TrendChart
                 title="Pressure (bar)"
-                data={consumedFrames}
+                data={chartFrames}
                 dataKeys={[{ key: 'pressure_bar', name: 'Pressure', color: '#a78bfa' }]}
               />
               <TrendChart
                 title="Axis 1 Position / Velocity"
-                data={consumedFrames}
+                data={chartFrames}
                 dataKeys={[
                   { key: 'axis1_position', name: 'Position (mm)', color: '#34d399' },
                   { key: 'axis1_velocity', name: 'Velocity (mm/s)', color: '#60a5fa' },
@@ -189,7 +190,7 @@ export default function App() {
               />
               <TrendChart
                 title="Axis 2 Position / Velocity"
-                data={consumedFrames}
+                data={chartFrames}
                 dataKeys={[
                   { key: 'axis2_position', name: 'Position (mm)', color: '#f472b6' },
                   { key: 'axis2_velocity', name: 'Velocity (mm/s)', color: '#fb923c' },
@@ -197,12 +198,12 @@ export default function App() {
               />
               <TrendChart
                 title="Motor Temperature (degC)"
-                data={consumedFrames}
+                data={chartFrames}
                 dataKeys={[{ key: 'motor_temp', name: 'Temp', color: '#fbbf24' }]}
               />
               <TrendChart
                 title="Servo Current / Voltage"
-                data={consumedFrames}
+                data={chartFrames}
                 dataKeys={[
                   { key: 'servo_current', name: 'Current (A)', color: '#4ade80' },
                   { key: 'servo_voltage', name: 'Voltage (V)', color: '#c084fc' },
@@ -210,7 +211,7 @@ export default function App() {
               />
               <TrendChart
                 title="Axis 1 Torque (N*m)"
-                data={consumedFrames}
+                data={chartFrames}
                 dataKeys={[{ key: 'axis1_torque', name: 'Torque', color: '#fb7185' }]}
                 height={200}
               />
@@ -226,7 +227,8 @@ export default function App() {
                     </h2>
                   </div>
                   <div className="text-right text-xs text-slate-400">
-                    <p>{consumedFrames.length.toLocaleString()} buffered frames</p>
+                    <p>{chartFrames.length.toLocaleString()} buffered for charts</p>
+                    <p>{tableFrames.length.toLocaleString()} shown in table</p>
                     <p>{latestBatchFrames.length.toLocaleString()} frames in latest batch</p>
                   </div>
                 </div>
@@ -269,7 +271,7 @@ export default function App() {
                 </div>
 
                 <p className="mt-4 text-xs text-slate-500">
-                  Frames below are accumulated from recent consumed messages and sorted by ts in ascending order.
+                  Charts keep a longer 10000-frame history, while the table only shows the latest 2000 frames in ascending ts order.
                 </p>
 
                 <div className="mt-4 overflow-hidden rounded-lg border border-slate-700/60">
@@ -286,7 +288,7 @@ export default function App() {
                         </tr>
                       </thead>
                       <tbody>
-                        {consumedFrames.map((frame, index) => (
+                        {tableFrames.map((frame, index) => (
                             <tr
                               key={`${frame._partition}-${frame._offset}-${frame.ts}-${index}`}
                               className="border-t border-slate-800/80 bg-slate-950/30 transition-colors hover:bg-slate-900/60"
