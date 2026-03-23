@@ -18,11 +18,12 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "kafkajs": "^2.2.4"
+    "kafkajs": "^2.2.4",
+    "lz4": "^0.6.5"
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
     "@types/node": "^20.11.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   }
 }

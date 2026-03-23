@@ -14,6 +14,7 @@ import * as kafkaClient from './kafka-client';
 import { Stats } from './stats';
 import { handleMessage } from './message-handler';
 import { TraceBatch } from './types';
+import { logger } from './logger';
 
 const stats = new Stats();
 
@@ -21,30 +22,30 @@ const stats = new Stats();
 //  主函数
 // =====================================================================
 async function run(): Promise<void> {
-    console.log('╔════════════════════════════════════════════════════╗');
-    console.log('║  Kafka Trace Consumer (TypeScript) - 控制端消费程序  ║');
-    console.log('╚════════════════════════════════════════════════════╝');
-    console.log('');
-    console.log(`  Broker:  ${config.KAFKA_BROKER}`);
-    console.log(`  Topic:   ${config.TOPIC}`);
-    console.log(`  Group:   ${config.GROUP_ID}`);
-    console.log(`  From:    ${config.FROM_BEGINNING ? '从头消费' : '只消费最新'}`);
-    console.log('');
+    logger.info('╔════════════════════════════════════════════════════╗');
+    logger.info('║  Kafka Trace Consumer (TypeScript) - 控制端消费程序  ║');
+    logger.info('╚════════════════════════════════════════════════════╝');
+    logger.info('');
+    logger.info(`  Broker:  ${config.KAFKA_BROKER}`);
+    logger.info(`  Topic:   ${config.TOPIC}`);
+    logger.info(`  Group:   ${config.GROUP_ID}`);
+    logger.info(`  From:    ${config.FROM_BEGINNING ? '从头消费' : '只消费最新'}`);
+    logger.info('');
 
     try {
         // 1. 连接
-        console.log('正在连接 Kafka Broker...');
+        logger.info('正在连接 Kafka Broker...');
         await kafkaClient.connect();
-        console.log(`✓ 已连接: ${config.KAFKA_BROKER}`);
+        logger.info(`✓ 已连接: ${config.KAFKA_BROKER}`);
 
         // 2. 订阅
         await kafkaClient.subscribe();
-        console.log(`✓ 已订阅 topic: ${config.TOPIC}`);
-        console.log('');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('开始消费数据... (按 Ctrl+C 退出)');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('');
+        logger.info(`✓ 已订阅 topic: ${config.TOPIC}`);
+        logger.info('');
+        logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.info('开始消费数据... (按 Ctrl+C 退出)');
+        logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.info('');
 
         // 3. 消费
         await kafkaClient.run(async ({ partition, message }) => {
@@ -53,26 +54,25 @@ async function run(): Promise<void> {
                 const { seq, frames } = payload;
 
                 stats.record(frames.length);
-                stats.printProgress(config.PROGRESS_INTERVAL, partition, message.offset, seq);
+                stats.printProgress(config.PROGRESS_INTERVAL, partition, message.offset, seq, logger);
 
                 await handleMessage(payload, { partition, offset: message.offset });
 
             } catch (err) {
                 const error = err as Error;
-                console.error(
-                    `[ERROR] 处理消息失败 (partition:${partition} offset:${message.offset}): ${error.message}`
+                logger.error(
+                    `处理消息失败 (partition:${partition} offset:${message.offset}): ${error.message}`
                 );
             }
         });
 
     } catch (error) {
         const err = error as Error;
-        console.error('[FATAL] 启动失败:', err.message);
-        console.error('');
-        console.error('排查步骤:');
-        console.error('  1. 确认云服务器 Kafka 正在运行');
-        console.error('  2. 确认安全组已开放 9092 端口');
-        console.error('  3. 确认 src/config.ts 中的 KAFKA_BROKER 地址正确');
+        logger.error(`启动失败: ${err.message}`);
+        logger.error('排查步骤:');
+        logger.error('  1. 确认云服务器 Kafka 正在运行');
+        logger.error('  2. 确认安全组已开放 9092 端口');
+        logger.error('  3. 确认 src/config.ts 中的 KAFKA_BROKER 地址正确');
         process.exit(1);
     }
 }
@@ -81,15 +81,15 @@ async function run(): Promise<void> {
 //  优雅退出
 // =====================================================================
 async function shutdown(): Promise<void> {
-    console.log('\n正在关闭...');
-    stats.printSummary();
+    logger.info('正在关闭...');
+    stats.printSummary(logger);
     try {
         await kafkaClient.disconnect();
-        console.log('✓ 已断开 Kafka 连接');
+        logger.info('✓ 已断开 Kafka 连接');
     } catch {
         // ignore
     }
-    console.log('程序已退出');
+    logger.info('程序已退出');
     process.exit(0);
 }
 
@@ -97,16 +97,16 @@ process.on('SIGINT',  () => { void shutdown(); });
 process.on('SIGTERM', () => { void shutdown(); });
 
 process.on('uncaughtException', (err: Error) => {
-    console.error('[FATAL] 未捕获的异常:', err);
+    logger.error(`未捕获的异常: ${err.message}`);
     process.exit(1);
 });
 
 process.on('unhandledRejection', (reason: unknown) => {
-    console.error('[FATAL] 未处理的 Promise 拒绝:', reason);
+    logger.error(`未处理的 Promise 拒绝: ${String(reason)}`);
     process.exit(1);
 });
 
 run().catch((err: Error) => {
-    console.error('[FATAL]', err);
+    logger.error(`启动异常: ${err.message}`);
     process.exit(1);
 });

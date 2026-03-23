@@ -2,8 +2,20 @@
  * Kafka 客户端封装
  * 基于 kafkajs，提供类型安全的连接、订阅、消费接口
  */
-import { Kafka, Consumer, EachMessagePayload, logLevel } from 'kafkajs';
+import { Kafka, Consumer, EachMessagePayload, logLevel, CompressionTypes, CompressionCodecs } from 'kafkajs';
 import config from './config';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const lz4 = require('lz4');
+
+// kafkajs 要求 CompressionCodecs 注册的必须是工厂函数 () => ({ compress, decompress })
+(CompressionCodecs as Record<number, unknown>)[CompressionTypes.LZ4] = () => ({
+    async compress(buffer: Buffer): Promise<Buffer> {
+        return lz4.encode(buffer);
+    },
+    async decompress(buffer: Buffer): Promise<Buffer> {
+        return lz4.decode(buffer);
+    },
+});
 
 let consumer: Consumer | null = null;
 
