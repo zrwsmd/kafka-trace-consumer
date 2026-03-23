@@ -1,0 +1,28 @@
+{
+  "name": "kafka-trace-consumer",
+  "version": "1.0.0",
+  "description": "Kafka Trace Consumer (TypeScript) - 控制端数据消费程序",
+  "main": "dist/consumer.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/consumer.js",
+    "dev": "ts-node src/consumer.ts",
+    "build:watch": "tsc --watch"
+  },
+  "keywords": [
+    "kafka",
+    "consumer",
+    "trace",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2"
+  }
+}
