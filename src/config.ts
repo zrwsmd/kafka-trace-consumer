@@ -12,7 +12,7 @@ const config = {
     KAFKA_BROKER: '47.129.128.147:9092',   // 改为你的云服务器公网IP
 
     TOPIC: 'trace-data',                    // topic 名称
-    GROUP_ID: 'trace-consumer-group-2',      // 消费者组ID
+    GROUP_ID: 'trace-consumer-group-4',      // 消费者组ID
 
     // ---- 消费行为 ----
     FROM_BEGINNING: true,                   // true=从头消费, false=只消费最新数据

@@ -18,8 +18,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@types/ws": "^8.18.1",
     "kafkajs": "^2.2.4",
-    "lz4": "^0.6.5"
+    "lz4": "^0.6.5",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

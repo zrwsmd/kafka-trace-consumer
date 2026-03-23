@@ -31,6 +31,7 @@
  * }
  */
 import { TraceBatch, MessageMeta } from './types';
+import { broadcast } from './ws-server';
 
 /**
  * 处理单条 Kafka 消息
@@ -40,41 +41,16 @@ import { TraceBatch, MessageMeta } from './types';
 export async function handleMessage(payload: TraceBatch, meta: MessageMeta): Promise<void> {
     const { taskId, seq, period, frames } = payload;
 
-    // ===== 在这里添加你的业务逻辑 =====
-
-    // 示例 1: 打印前几条消息的详细内容 (调试用)
-    // if (seq <= 3) {
-    //     console.log(`\n[DEBUG] seq=${seq} frames=${frames.length}`);
-    //     console.log('  第一帧:', JSON.stringify(frames[0], null, 2));
-    // }
-
-    // 示例 2: 存入 MySQL (需要: npm install mysql2 @types/node)
-    // import mysql from 'mysql2/promise';
-    // const conn = await mysql.createConnection({ host: 'localhost', user: 'root', database: 'trace' });
-    // for (const frame of frames) {
-    //     await conn.execute(
-    //         'INSERT INTO trace_data (task_id, seq, ts, axis1_pos, motor_rpm) VALUES (?,?,?,?,?)',
-    //         [taskId, seq, frame.ts, frame.axis1_position, frame.motor_rpm]
-    //     );
-    // }
-    // await conn.end();
-
-    // 示例 3: 存入 MongoDB (需要: npm install mongodb)
-    // import { MongoClient } from 'mongodb';
-    // const client = new MongoClient('mongodb://localhost:27017');
-    // await client.connect();
-    // await client.db('trace').collection<TraceBatch>('batches').insertOne(payload);
-    // await client.close();
-
-    // 示例 4: 实时推送到前端 WebSocket (需要: npm install ws @types/ws)
-    // import { WebSocket, WebSocketServer } from 'ws';
-    // wss.clients.forEach((client) => {
-    //     if (client.readyState === WebSocket.OPEN) {
-    //         client.send(JSON.stringify({ seq, frames }));
-    //     }
-    // });
-
-    // 示例 5: 写入文件 (每条 batch 一行 JSON)
-    // import { appendFileSync } from 'fs';
-    // appendFileSync('trace-output.jsonl', JSON.stringify(payload) + '\n');
+    // 实时推送最新帧到前端仪表盘
+    if (frames.length > 0) {
+        broadcast({
+            type: 'data',
+            taskId,
+            seq,
+            period,
+            timestamp: Date.now(),
+            latest: frames[frames.length - 1],
+            frameCount: frames.length,
+        });
+    }
 }

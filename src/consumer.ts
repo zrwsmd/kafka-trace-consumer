@@ -15,6 +15,7 @@ import { Stats } from './stats';
 import { handleMessage } from './message-handler';
 import { TraceBatch } from './types';
 import { logger } from './logger';
+import { startServer as startWsServer, stopServer as stopWsServer, broadcast } from './ws-server';
 
 const stats = new Stats();
 
@@ -33,6 +34,15 @@ async function run(): Promise<void> {
     logger.info('');
 
     try {
+        // 0. 启动 WebSocket 服务 (供前端仪表盘连接)
+        startWsServer(3001);
+        logger.info('✓ 仪表盘地址: http://localhost:5173');
+
+        // 定时广播统计数据
+        const statsTimer = setInterval(() => {
+            broadcast({ type: 'stats', stats: stats.getSnapshot() });
+        }, 1000);
+
         // 1. 连接
         logger.info('正在连接 Kafka Broker...');
         await kafkaClient.connect();
@@ -84,6 +94,7 @@ async function shutdown(): Promise<void> {
     logger.info('正在关闭...');
     stats.printSummary(logger);
     try {
+        stopWsServer();
         await kafkaClient.disconnect();
         logger.info('✓ 已断开 Kafka 连接');
     } catch {
