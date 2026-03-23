@@ -10,7 +10,7 @@ import {
 
 const MAX_POINTS = 300;
 const MAX_RECENT_MESSAGES = 50;
-const MAX_FRAME_ROWS = 5000;
+const MAX_FRAME_ROWS = 2000;
 const WS_URL = 'ws://localhost:3001';
 
 export function useWebSocket() {

@@ -48,7 +48,6 @@ function formatNumber(value: number, fractionDigits: number = 3): string {
 export default function App() {
   const {
     connected,
-    dataPoints,
     latest,
     latestMessage,
     recentMessages,
@@ -172,17 +171,17 @@ export default function App() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <TrendChart
                 title="Motor RPM"
-                data={dataPoints}
+                data={consumedFrames}
                 dataKeys={[{ key: 'motor_rpm', name: 'RPM', color: '#22d3ee' }]}
               />
               <TrendChart
                 title="Pressure (bar)"
-                data={dataPoints}
+                data={consumedFrames}
                 dataKeys={[{ key: 'pressure_bar', name: 'Pressure', color: '#a78bfa' }]}
               />
               <TrendChart
                 title="Axis 1 Position / Velocity"
-                data={dataPoints}
+                data={consumedFrames}
                 dataKeys={[
                   { key: 'axis1_position', name: 'Position (mm)', color: '#34d399' },
                   { key: 'axis1_velocity', name: 'Velocity (mm/s)', color: '#60a5fa' },
@@ -190,7 +189,7 @@ export default function App() {
               />
               <TrendChart
                 title="Axis 2 Position / Velocity"
-                data={dataPoints}
+                data={consumedFrames}
                 dataKeys={[
                   { key: 'axis2_position', name: 'Position (mm)', color: '#f472b6' },
                   { key: 'axis2_velocity', name: 'Velocity (mm/s)', color: '#fb923c' },
@@ -198,12 +197,12 @@ export default function App() {
               />
               <TrendChart
                 title="Motor Temperature (degC)"
-                data={dataPoints}
+                data={consumedFrames}
                 dataKeys={[{ key: 'motor_temp', name: 'Temp', color: '#fbbf24' }]}
               />
               <TrendChart
                 title="Servo Current / Voltage"
-                data={dataPoints}
+                data={consumedFrames}
                 dataKeys={[
                   { key: 'servo_current', name: 'Current (A)', color: '#4ade80' },
                   { key: 'servo_voltage', name: 'Voltage (V)', color: '#c084fc' },
@@ -211,7 +210,7 @@ export default function App() {
               />
               <TrendChart
                 title="Axis 1 Torque (N*m)"
-                data={dataPoints}
+                data={consumedFrames}
                 dataKeys={[{ key: 'axis1_torque', name: 'Torque', color: '#fb7185' }]}
                 height={200}
               />

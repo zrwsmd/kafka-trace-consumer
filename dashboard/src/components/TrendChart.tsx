@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -8,25 +8,21 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
-import { DataPoint } from '../types';
+import { TraceFrame } from '../types';
 
 interface TrendChartProps {
   title: string;
-  data: DataPoint[];
+  data: Array<TraceFrame & { _time: number }>;
   dataKeys: { key: string; name: string; color: string }[];
   height?: number;
 }
 
 export function TrendChart({ title, data, dataKeys, height = 200 }: TrendChartProps) {
-  const chartData = useMemo(() => {
-    return data.map((d, i) => ({ ...d, idx: i }));
-  }, [data]);
-
   return (
     <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4 backdrop-blur">
       <h3 className="text-sm font-medium text-slate-300 mb-3">{title}</h3>
       <ResponsiveContainer width="100%" height={height}>
-        <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
           <defs>
             {dataKeys.map((dk) => (
               <linearGradient key={dk.key} id={`grad-${dk.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -37,10 +33,11 @@ export function TrendChart({ title, data, dataKeys, height = 200 }: TrendChartPr
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
           <XAxis
-            dataKey="idx"
-            tick={false}
+            dataKey="ts"
+            tick={{ fill: '#64748b', fontSize: 11 }}
             axisLine={{ stroke: '#334155' }}
             tickLine={false}
+            minTickGap={32}
           />
           <YAxis
             tick={{ fill: '#64748b', fontSize: 11 }}
@@ -56,12 +53,13 @@ export function TrendChart({ title, data, dataKeys, height = 200 }: TrendChartPr
               borderRadius: '8px',
               fontSize: 12,
             }}
+            labelFormatter={(value) => `ts: ${value}`}
             labelStyle={{ color: '#94a3b8' }}
           />
           {dataKeys.map((dk) => (
             <Area
               key={dk.key}
-              type="monotone"
+              type="linear"
               dataKey={dk.key}
               name={dk.name}
               stroke={dk.color}
