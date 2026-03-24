@@ -40,6 +40,8 @@ function createConsumer(): Consumer {
         groupId: config.GROUP_ID,
         sessionTimeout: config.SESSION_TIMEOUT,
         heartbeatInterval: config.HEARTBEAT_INTERVAL,
+        maxWaitTimeInMs: config.MAX_WAIT_TIME,
+        maxBytes: config.MAX_BYTES,
     });
 
     return consumer;

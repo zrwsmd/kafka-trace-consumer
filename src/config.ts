@@ -12,7 +12,7 @@ const config = {
     KAFKA_BROKER: '47.129.128.147:9092',   // 改为你的云服务器公网IP
 
     TOPIC: 'trace-data',                    // topic 名称
-    GROUP_ID: 'trace-consumer-group-16',      // 消费者组ID
+    GROUP_ID: 'trace-consumer-group-19',      // 消费者组ID
 
     // ---- 消费行为 ----
     FROM_BEGINNING: true,                   // true=从头消费, false=只消费最新数据
@@ -20,8 +20,10 @@ const config = {
     // ---- 连接参数 ----
     CONNECTION_TIMEOUT: 10000,              // 连接超时 ms
     REQUEST_TIMEOUT: 30000,                 // 请求超时 ms
-    SESSION_TIMEOUT: 30000,                 // Session 超时 ms
-    HEARTBEAT_INTERVAL: 3000,              // 心跳间隔 ms
+    SESSION_TIMEOUT: 120000,                // Session 超时 ms (2分钟)
+    HEARTBEAT_INTERVAL: 5000,              // 心跳间隔 ms
+    MAX_WAIT_TIME: 5000,                   // 每次 fetch 最大等待 ms
+    MAX_BYTES: 1048576,                    // 每次 fetch 最大字节数 1MB
 
     // ---- 进度打印 ----
     PROGRESS_INTERVAL: 1,                   // 每消费多少包打印一次进度
